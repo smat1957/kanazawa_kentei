@@ -188,6 +188,9 @@ struct NaviView: View {
         dm.dao.select_all()
         dm.current = 0
         dm.sizeOfMondai = mondai.count
+        dm.kais = dm.dao.distinct(field_name: "kai")
+        dm.categories = dm.dao.distinct(field_name: "category")
+        dm.levels = dm.dao.distinct(field_name: "level")
         dm.showcurrent(current: dm.current)
     }
 

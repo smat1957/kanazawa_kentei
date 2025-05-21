@@ -300,7 +300,7 @@ struct NaviView: View {
 struct SearchView: View {
     @ObservedObject var dm:DataManager
     
-    private let searchObjs = ["実施回","級","分類","回＆級","回＆級＆分類","キーワード","全体"]
+    private let searchObjs = ["全体", "実施回", "級", "分類", "回＆級" ,"回＆級＆分類" ,"キーワード"]
     @State var selectedSearch = ""
     @State var newsave:String = "New"
     @State var editupdate:String = "Edit"
@@ -309,19 +309,19 @@ struct SearchView: View {
     @State var isError = false
     
     func search(){
-        if selectedSearch==searchObjs[0] {
+        if selectedSearch==searchObjs[1] {
             dm.dao.select_kai(kai: dm.selectedJisshiKai)
-        }else if selectedSearch==searchObjs[1] {
-            dm.dao.select_level(level: dm.selectedLevel)
         }else if selectedSearch==searchObjs[2] {
-            dm.dao.select_category(category: dm.selectedCategory)
+            dm.dao.select_level(level: dm.selectedLevel)
         }else if selectedSearch==searchObjs[3] {
-            dm.dao.select_kai_level(kai: dm.selectedJisshiKai, level: dm.selectedLevel)
+            dm.dao.select_category(category: dm.selectedCategory)
         }else if selectedSearch==searchObjs[4] {
-            dm.dao.select_kai_level_category(kai: dm.selectedJisshiKai, level: dm.selectedLevel, category: dm.selectedCategory)
+            dm.dao.select_kai_level(kai: dm.selectedJisshiKai, level: dm.selectedLevel)
         }else if selectedSearch==searchObjs[5] {
-            dm.dao.select_keyword(keyword: dm.selectedKeyWord)
+            dm.dao.select_kai_level_category(kai: dm.selectedJisshiKai, level: dm.selectedLevel, category: dm.selectedCategory)
         }else if selectedSearch==searchObjs[6] {
+            dm.dao.select_keyword(keyword: dm.selectedKeyWord)
+        }else if selectedSearch==searchObjs[0] {
             dm.dao.select_all()
         }else{
             print("error!")
@@ -382,12 +382,12 @@ struct SearchView: View {
                     newsave = "New"
                     editupdate = "Edit"
                 }.buttonStyle(.bordered)
-                Picker(selection: $selectedSearch, label: Text("検索")) {
+                Picker(selection: $selectedSearch, label: Text(selectedSearch)) {
                     ForEach (searchObjs, id: \.self) {
-                        Text($0)
+                        Text($0).font(.subheadline)
                     }
-                }.pickerStyle(.menu)
-                    .frame(width:200)
+                }.pickerStyle(.wheel)
+                    .frame(width: .infinity, height: 38)
                     .clipped()
                     .contentShape(Rectangle())
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -437,12 +437,12 @@ struct SearchView: View {
             
             HStack{
                 Text("回：")
-                Picker(selection:$dm.selectedJisshiKai, label: Text("実施回")) {
+                Picker(selection:$dm.selectedJisshiKai, label: Text(dm.selectedJisshiKai)) {
                     ForEach (dm.kais, id: \.self) {
-                        Text($0)
+                        Text($0).font(.subheadline)
                     }
-                }.pickerStyle(.menu)
-                //.frame(width:110)
+                }.pickerStyle(.wheel)
+                .frame(width: 60, height: 38)
                 .clipped()
                 .contentShape(Rectangle())
                 /*
@@ -468,12 +468,12 @@ struct SearchView: View {
                 }
                  */
                 Text("級：")
-                Picker(selection:$dm.selectedLevel, label: Text("レベル")) {
+                Picker(selection:$dm.selectedLevel, label: Text(dm.selectedLevel)) {
                     ForEach (dm.levels, id: \.self) {
-                        Text($0)
+                        Text($0).font(.subheadline)
                     }
-                }.pickerStyle(.menu)
-                //.frame(width:110)
+                }.pickerStyle(.wheel)
+                .frame(width: 60, height: 38)
                 .clipped()
                 .contentShape(Rectangle())
                 /*
@@ -501,12 +501,13 @@ struct SearchView: View {
             }.frame(maxWidth: .infinity, alignment: .center)
             HStack{
                 Text("分類：")
-                Picker(selection:$dm.selectedCategory, label: Text("分類")) {
+                Picker(selection:$dm.selectedCategory, label: Text(dm.selectedCategory)) {
                     ForEach (dm.categories, id: \.self) {
-                        Text($0)
+                        Text($0).font(.subheadline)
                     }
-                }.pickerStyle(.menu)
-                //.frame(width:110)
+                }
+                .pickerStyle(.wheel)
+                .frame(width: .infinity, height: 38)
                 .clipped()
                 .contentShape(Rectangle())
                 /*

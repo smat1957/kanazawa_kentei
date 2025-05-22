@@ -387,10 +387,9 @@ struct SearchView: View {
                         Text($0).font(.subheadline)
                     }
                 }.pickerStyle(.wheel)
-                    .frame(width: .infinity, height: 38)
+                    .frame(width: 120, height: 38, alignment: .leading)
                     .clipped()
                     .contentShape(Rectangle())
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 
                 /* 以下のボタンの表示を有効にもできる（その場合、上の検索Pickerの表示幅を狭めること）
                 Button( newsave ) {
@@ -433,16 +432,16 @@ struct SearchView: View {
                     }
                 */
                 
-            }.frame(maxWidth: .infinity, alignment: .leading)
+            //}.frame(maxWidth: .infinity, alignment: .leading)
             
-            HStack{
-                Text("回：")
+            //HStack{
+                Text("回")
                 Picker(selection:$dm.selectedJisshiKai, label: Text(dm.selectedJisshiKai)) {
                     ForEach (dm.kais, id: \.self) {
                         Text($0).font(.subheadline)
                     }
                 }.pickerStyle(.wheel)
-                .frame(width: 60, height: 38)
+                .frame(width: 50, height: 38)
                 .clipped()
                 .contentShape(Rectangle())
                 /*
@@ -467,13 +466,13 @@ struct SearchView: View {
                     
                 }
                  */
-                Text("級：")
+                Text("級")
                 Picker(selection:$dm.selectedLevel, label: Text(dm.selectedLevel)) {
                     ForEach (dm.levels, id: \.self) {
                         Text($0).font(.subheadline)
                     }
                 }.pickerStyle(.wheel)
-                .frame(width: 60, height: 38)
+                .frame(width: 55, height: 38)
                 .clipped()
                 .contentShape(Rectangle())
                 /*
@@ -497,7 +496,7 @@ struct SearchView: View {
                     }
                 }
                 */
-                Text(dm.selectedDate)
+                //Text(dm.selectedDate)
             }.frame(maxWidth: .infinity, alignment: .center)
             HStack{
                 Text("分類：")
@@ -507,7 +506,7 @@ struct SearchView: View {
                     }
                 }
                 .pickerStyle(.wheel)
-                .frame(width: .infinity, height: 38)
+                .frame(width: .infinity, height: 38, alignment: .center)
                 .clipped()
                 .contentShape(Rectangle())
                 /*

@@ -187,6 +187,44 @@ final class DataManager: ObservableObject {
         }
     }
 
+    func deleteQuestion(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard isReady, !isBusy else {
+            completion(.failure(AppError(message: "現在削除できません。再読込後に試してください。")))
+            return
+        }
+        // 削除後の検索結果に残る次の問題、なければ前の問題を優先する。
+        let remainingIDs = questions.map(\.id).filter { $0 != id }
+        let neighborID = remainingIDs.isEmpty ? nil : remainingIDs[min(current, remainingIDs.count - 1)]
+        isBusy = true
+        workQueue.async { [dao] in
+            do {
+                try dao.delete(id: id)
+                let reload = Result { try dao.selectAll() }
+                DispatchQueue.main.async {
+                    self.isBusy = false
+                    switch reload {
+                    case .success(let snapshot):
+                        self.replaceSnapshot(snapshot)
+                        if let neighborID = neighborID,
+                           let index = self.questions.firstIndex(where: { $0.id == neighborID }) {
+                            self.show(at: index)
+                        }
+                        self.notice = "問題を削除しました。"
+                    case .failure(let error):
+                        self.isReady = false
+                        self.errorMessage = "削除は完了しましたが、一覧の再読込に失敗しました。再読込してください。\n\(error.localizedDescription)"
+                    }
+                    completion(.success(()))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isBusy = false
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
     func prepareImport(_ url: URL) {
         guard isReady, !isBusy else { return }
         pendingImport = []

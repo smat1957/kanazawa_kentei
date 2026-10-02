@@ -61,6 +61,8 @@ struct QuestionEditorView: View {
     @State private var draft: QuestionDraft
     @State private var isSaving = false
     @State private var confirmsDiscard = false
+    @State private var confirmsDeletion = false
+    @State private var isDeleting = false
     @State private var errorMessage: String?
     private let original: QuestionDraft
     private let isNew: Bool
@@ -78,7 +80,7 @@ struct QuestionEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                if isSaving { ProgressView("保存中…") }
+                if isSaving || isDeleting { ProgressView(isDeleting ? "削除中…" : "保存中…") }
                 if let errorMessage = errorMessage {
                     Section { Text(errorMessage).foregroundStyle(.red) }
                 }
@@ -191,34 +193,58 @@ struct QuestionEditorView: View {
                     }
                 }
             }
-            .disabled(isSaving)
-            .navigationTitle(isNew ? "問題の新規登録" : "問題の編集")
+            .disabled(isSaving || isDeleting)
+            .navigationTitle(isNew ? "問題の新規登録" : "編集")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("キャンセル") { requestClose() }.disabled(isSaving)
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { requestClose() } label: {
+                        Text("キャンセル")
+                            .fixedSize(horizontal: true, vertical: false)
+                    }
+                        .disabled(isSaving || isDeleting)
+                }
+                if !isNew {
+                    if #available(iOS 26.0, *) {
+                        ToolbarSpacer(.fixed, placement: .topBarLeading)
+                    }
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(role: .destructive) { confirmsDeletion = true } label: {
+                            Text("削除")
+                                .fixedSize(horizontal: true, vertical: false)
+                        }
+                            .tint(.red)
+                            .foregroundStyle(Color.red)
+                            .disabled(isSaving || isDeleting || !dm.isReady || dm.isBusy)
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") { save() }
-                        .disabled(isSaving || !dm.isReady || dm.isBusy || (!isNew && !hasChanges))
+                        .disabled(isSaving || isDeleting || !dm.isReady || dm.isBusy || (!isNew && !hasChanges))
                 }
             }
-            .interactiveDismissDisabled(hasChanges || isSaving)
+            .interactiveDismissDisabled(hasChanges || isSaving || isDeleting)
             .alert("入力内容を破棄しますか？", isPresented: $confirmsDiscard) {
                 Button("破棄して閉じる", role: .destructive) { dismiss() }
                 Button("入力を続ける", role: .cancel) { }
             } message: { Text("保存していない変更があります。") }
+            .alert("この問題を削除しますか？", isPresented: $confirmsDeletion) {
+                Button("削除する", role: .destructive) { deleteQuestion() }
+                Button("キャンセル", role: .cancel) { }
+            } message: {
+                Text("第\(original.kai)回・\(DataManager.levelTitle(original.level))・問題\(original.number)を削除します。この操作は取り消せません。未保存の変更も破棄されます。")
+            }
         }
     }
 
     private func requestClose() {
-        guard !isSaving else { return }
+        guard !isSaving, !isDeleting else { return }
         if hasChanges { confirmsDiscard = true }
         else { dismiss() }
     }
 
     private func save() {
-        guard !isSaving else { return }
+        guard !isSaving, !isDeleting else { return }
         errorMessage = nil
         do {
             let item = try draft.makeQuestion()
@@ -232,4 +258,18 @@ struct QuestionEditorView: View {
             }
         } catch { errorMessage = error.localizedDescription }
     }
+
+    private func deleteQuestion() {
+        guard !isNew, !isSaving, !isDeleting else { return }
+        errorMessage = nil
+        isDeleting = true
+        dm.deleteQuestion(id: original.id) { result in
+            isDeleting = false
+            switch result {
+            case .success: dismiss()
+            case .failure(let error): errorMessage = error.localizedDescription
+            }
+        }
+    }
+
 }

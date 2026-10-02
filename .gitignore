@@ -1,0 +1,47 @@
+# macOS
+.DS_Store
+.AppleDouble
+._*
+
+# Xcode user-specific state
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+
+# Build outputs and local dependencies
+build/
+DerivedData/
+.build/
+.swiftpm/
+*.ipa
+*.dSYM/
+*.dSYM.zip
+
+# Runtime database files (including SQLite journals)
+*_sqlite3
+*_sqlite3-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+
+# Local backups and temporary files
+backups/
+*.log
+*.tmp
+*.swp
+*~
+__pycache__/
+*.py[cod]
+.venv/
+
+# Local credentials and environment configuration
+.env
+.env.*
+!.env.example
+.aws/
+*.p12
+*.mobileprovision

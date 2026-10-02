@@ -1,2 +1,9 @@
-# Auto detect text files and perform LF normalization
 * text=auto
+*.swift text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.pbxproj text eol=lf
+# Preserve the original CSV line endings and data bytes.
+*.csv -text
+*.png binary
+*.numbers binary

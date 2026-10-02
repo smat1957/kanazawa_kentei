@@ -21,6 +21,21 @@ final class DataManager: ObservableObject {
     @Published private(set) var pendingImport: [Mondai] = []
 
     private var appliedKeyword = ""
+    private var restoresOnNextLoad = true
+    private var isRestoringReference = false
+    private let referenceKey = "Kanazawa.lastReference.v1"
+
+    private struct LastReference: Codable {
+        let questionID: Int
+        let questionKai: String
+        let questionLevel: String
+        let questionNumber: Int
+        let questionText: String
+        let searchKai: String
+        let searchLevel: String
+        let searchCategory: String
+        let keyword: String
+    }
 
     private let dao = DAO()
     private let workQueue = DispatchQueue(label: "jp.matoike.kanazawa.database", qos: .userInitiated)
@@ -63,7 +78,16 @@ final class DataManager: ObservableObject {
                 switch result {
                 case .success(let questions):
                     self.isReady = true
-                    self.replaceSnapshot(questions)
+                    if self.restoresOnNextLoad {
+                        self.isRestoringReference = true
+                        self.replaceSnapshot(questions)
+                        self.restoreLastReference()
+                        self.isRestoringReference = false
+                        self.restoresOnNextLoad = false
+                        self.saveLastReference()
+                    } else {
+                        self.replaceSnapshot(questions)
+                    }
                 case .failure(let error):
                     self.isReady = false
                     self.errorMessage = error.localizedDescription
@@ -133,6 +157,38 @@ final class DataManager: ObservableObject {
         guard !questions.isEmpty else { current = 0; choices = []; return }
         current = min(max(0, index), questions.count - 1)
         choices = questions[current].choices.shuffled()
+        saveLastReference()
+    }
+
+    private func saveLastReference() {
+        guard !isRestoringReference, let question = question else { return }
+        let reference = LastReference(
+            questionID: question.id, questionKai: question.kai, questionLevel: question.level,
+            questionNumber: question.number, questionText: question.question,
+            searchKai: searchKai, searchLevel: searchLevel, searchCategory: searchCategory,
+            keyword: appliedKeyword)
+        guard let data = try? JSONEncoder().encode(reference) else { return }
+        UserDefaults.standard.set(data, forKey: referenceKey)
+    }
+
+    private func restoreLastReference() {
+        guard let data = UserDefaults.standard.data(forKey: referenceKey),
+              let reference = try? JSONDecoder().decode(LastReference.self, from: data) else { return }
+        if kais.contains(reference.searchKai) { searchKai = reference.searchKai }
+        searchLevel = reference.searchLevel
+        searchCategory = reference.searchCategory
+        reconcileSelections()
+        keyword = reference.keyword
+        appliedKeyword = reference.keyword
+        applyFilters()
+        // IDだけで判定せず、別DBの同じIDを誤って復元することを防ぐ。
+        if let index = questions.firstIndex(where: {
+            $0.id == reference.questionID && $0.kai == reference.questionKai
+                && $0.level == reference.questionLevel && $0.number == reference.questionNumber
+                && $0.question == reference.questionText
+        }) {
+            show(at: index)
+        }
     }
 
     /// 入力画面のコピーを保存し、DB保存と表示の再読込を区別して通知する。
@@ -492,13 +548,13 @@ struct ContentView: View {
                     } label: {
                         HStack(alignment: .top) {
                             Image(systemName: dm.selectedChoice == index ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(Color.accentColor)
                             Text(choice.isEmpty ? "未入力" : choice)
-                                .foregroundStyle(Color.black)
+                                .foregroundStyle(.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }.padding(8)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Color.accentColor)
                     .disabled(choice.isEmpty || dm.isBusy)
                     .accessibilityLabel("選択肢\(index + 1)：\(choice)")
                 }

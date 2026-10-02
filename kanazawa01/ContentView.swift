@@ -505,22 +505,25 @@ struct ContentView: View {
         HStack {
             Button { dm.show(at: 0) } label: { Image(systemName: "backward.end").frame(width: 44, height: 44).contentShape(Rectangle()) }
                 .accessibilityLabel("最初の問題")
+                .foregroundStyle(Color.accentColor)
                 .disabled(dm.current == 0)
             Button { dm.show(at: dm.current - 1) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44).contentShape(Rectangle()) }
                 .accessibilityLabel("前の問題")
+                .foregroundStyle(Color.accentColor)
                 .disabled(dm.current == 0)
             Spacer()
-            Text(dm.position).monospacedDigit()
+            Text(dm.position).monospacedDigit().foregroundStyle(.primary)
             Spacer()
             Button { dm.show(at: dm.current + 1) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44).contentShape(Rectangle()) }
                 .accessibilityLabel("次の問題")
+                .foregroundStyle(Color.accentColor)
                 .disabled(dm.current >= dm.questions.count - 1)
             Button { dm.show(at: dm.questions.count - 1) } label: { Image(systemName: "forward.end").frame(width: 44, height: 44).contentShape(Rectangle()) }
                 .accessibilityLabel("最後の問題")
+                .foregroundStyle(Color.accentColor)
                 .disabled(dm.current >= dm.questions.count - 1)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.accentColor)
         .frame(minHeight: 44)
         .disabled(!dm.isReady || dm.isBusy || dm.questions.isEmpty || isSwipeAnimating)
     }
@@ -540,6 +543,8 @@ struct ContentView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.secondary.opacity(0.5), lineWidth: 1)
             }
+            .contentShape(Rectangle())
+            .simultaneousGesture(questionSwipeGesture)
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(dm.choices.enumerated()), id: \.offset) { index, choice in
                     Button {
@@ -564,6 +569,8 @@ struct ContentView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.secondary.opacity(0.5), lineWidth: 1)
             }
+            .contentShape(Rectangle())
+            .simultaneousGesture(questionSwipeGesture)
             Button(dm.revealsAnswer ? "答え・解説を隠す" : "答え・解説を表示") { dm.revealsAnswer.toggle() }
                 .buttonStyle(.bordered).disabled(dm.isBusy)
             if dm.revealsAnswer {
@@ -575,10 +582,13 @@ struct ContentView: View {
             }
         }
         .textSelection(.enabled)
-        .simultaneousGesture(DragGesture(minimumDistance: 40).onEnded { gesture in
+    }
+
+    private var questionSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 40).onEnded { gesture in
             guard abs(gesture.translation.width) > abs(gesture.translation.height) * 1.5 else { return }
             moveBySwipe(forward: gesture.translation.width < 0)
-        })
+        }
     }
 
     private func moveBySwipe(forward: Bool) {

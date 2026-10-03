@@ -192,7 +192,7 @@ final class DataManager: ObservableObject {
     }
 
     /// 入力画面のコピーを保存し、DB保存と表示の再読込を区別して通知する。
-    func saveQuestion(_ question: Mondai, isNew: Bool, completion: @escaping (Result<Void, Error>) -> Void) {
+    func saveQuestion(_ question: Mondai, isNew: Bool, completion: @escaping (Result<Mondai, Error>) -> Void) {
         guard isReady, !isBusy else {
             completion(.failure(AppError(message: "現在保存できません。再読込後に試してください。")))
             return
@@ -232,7 +232,9 @@ final class DataManager: ObservableObject {
                         self.isReady = false
                         self.errorMessage = "保存は完了しましたが、一覧の再読込に失敗しました。再登録せず再読込してください。\n\(error.localizedDescription)"
                     }
-                    completion(.success(()))
+                    var persisted = item
+                    persisted.id = savedID
+                    completion(.success(persisted))
                 }
             } catch {
                 DispatchQueue.main.async {
@@ -381,17 +383,17 @@ struct ContentView: View {
                     .padding(.vertical, 8)
                     .background(Color.clear)
             }
-            .navigationTitle("Kanazawa")
+            .navigationTitle("金澤検定")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("新規", systemImage: "plus") {
-                            editorSession = QuestionEditorSession(question: nil)
+                            editorSession = QuestionEditorSession(question: nil, questionIDs: [])
                         }.disabled(!dm.isReady || dm.isBusy)
                         Button("編集", systemImage: "square.and.pencil") {
                             if let question = dm.question {
-                                editorSession = QuestionEditorSession(question: question)
+                                editorSession = QuestionEditorSession(question: question, questionIDs: dm.questions.map(\.id))
                             }
                         }.disabled(!dm.isReady || dm.isBusy || dm.question == nil)
                         Divider()
@@ -409,7 +411,7 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showingAbout) { AboutView() }
             .sheet(item: $editorSession) { session in
-                QuestionEditorView(dm: dm, question: session.question)
+                QuestionEditorView(dm: dm, question: session.question, questionIDs: session.questionIDs)
             }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json, .commaSeparatedText, .plainText, .data], allowsMultipleSelection: false) { result in
                 switch result {
@@ -495,6 +497,7 @@ struct ContentView: View {
                     if !dm.keyword.isEmpty {
                         Button {
                             dm.keyword = ""
+                            dm.search()
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)

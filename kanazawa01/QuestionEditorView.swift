@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// 開くたびに別の入力状態を作り、編集中に表示対象が変わっても編集IDを固定する。
+/// 開くたびに別の入力状態を作り、編集開始時の検索結果の順序を保持する。
 struct QuestionEditorSession: Identifiable {
     let id = UUID()
     let question: Mondai?
+    let questionIDs: [Int]
 }
 
 private struct QuestionDraft: Equatable {
@@ -64,14 +65,20 @@ struct QuestionEditorView: View {
     @State private var confirmsDeletion = false
     @State private var isDeleting = false
     @State private var errorMessage: String?
-    private let original: QuestionDraft
-    private let isNew: Bool
+    @State private var original: QuestionDraft
+    @State private var isNew: Bool
+    @State private var editingIndex: Int
+    private let questionIDs: [Int]
 
-    init(dm: DataManager, question: Mondai?) {
+    init(dm: DataManager, question: Mondai?, questionIDs: [Int]) {
         self.dm = dm
         let initial = QuestionDraft(question)
-        original = initial
-        isNew = question == nil
+        self.questionIDs = questionIDs
+        _original = State(initialValue: initial)
+        _isNew = State(initialValue: question == nil)
+        _editingIndex = State(initialValue: question.flatMap { item in
+            questionIDs.firstIndex(of: item.id)
+        } ?? questionIDs.count)
         _draft = State(initialValue: initial)
     }
 
@@ -193,7 +200,9 @@ struct QuestionEditorView: View {
                     }
                 }
             }
+            .id(editingIndex)
             .disabled(isSaving || isDeleting)
+            .simultaneousGesture(editorSwipeGesture)
             .navigationTitle(isNew ? "問題の新規登録" : "編集")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -243,8 +252,61 @@ struct QuestionEditorView: View {
         else { dismiss() }
     }
 
+    private var editorSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 40).onEnded { gesture in
+            guard abs(gesture.translation.width) > abs(gesture.translation.height) * 1.5 else { return }
+            moveBySwipe(forward: gesture.translation.width < 0)
+        }
+    }
+
+    private func moveBySwipe(forward: Bool) {
+        guard dm.isReady, !dm.isBusy, !isSaving, !isDeleting,
+              !confirmsDiscard, !confirmsDeletion else { return }
+        let destination = editingIndex + (forward ? 1 : -1)
+        guard destination >= 0, destination <= questionIDs.count else { return }
+        // 保存前のIDを使う。保存による検索結果の並び替え・対象外への変更に影響されない。
+        let destinationID = destination < questionIDs.count ? questionIDs[destination] : nil
+        if hasChanges {
+            saveChanges {
+                loadEditor(at: destination, questionID: destinationID)
+            }
+        } else {
+            loadEditor(at: destination, questionID: destinationID)
+        }
+    }
+
+    private func loadEditor(at index: Int, questionID: Int?) {
+        guard dm.isReady else {
+            errorMessage = "保存は完了しましたが、一覧を再読込できないため移動できません。編集画面を閉じて再読込してください。"
+            return
+        }
+        let question: Mondai?
+        if let questionID = questionID {
+            guard let item = dm.allQuestions.first(where: { $0.id == questionID }) else {
+                errorMessage = "移動先の問題が見つかりません。編集画面を閉じて一覧を確認してください。"
+                return
+            }
+            question = item
+            if let displayIndex = dm.questions.firstIndex(where: { $0.id == questionID }) {
+                dm.show(at: displayIndex)
+            }
+        } else {
+            question = nil
+        }
+        let initial = QuestionDraft(question)
+        draft = initial
+        original = initial
+        isNew = question == nil
+        editingIndex = index
+        errorMessage = nil
+    }
+
     private func save() {
-        guard !isSaving, !isDeleting else { return }
+        saveChanges { dismiss() }
+    }
+
+    private func saveChanges(onSuccess: @escaping () -> Void) {
+        guard !isSaving, !isDeleting, dm.isReady, !dm.isBusy else { return }
         errorMessage = nil
         do {
             let item = try draft.makeQuestion()
@@ -252,7 +314,13 @@ struct QuestionEditorView: View {
             dm.saveQuestion(item, isNew: isNew) { result in
                 isSaving = false
                 switch result {
-                case .success: dismiss()
+                case .success(let savedItem):
+                    // DB保存後の再読込が失敗しても、新規を重複登録しない。
+                    let saved = QuestionDraft(savedItem)
+                    draft = saved
+                    original = saved
+                    isNew = false
+                    onSuccess()
                 case .failure(let error): errorMessage = error.localizedDescription
                 }
             }

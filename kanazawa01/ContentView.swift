@@ -487,10 +487,32 @@ struct ContentView: View {
                 .disabled(dm.categories.isEmpty)
             }
             HStack {
-                TextField("検索キーワード", text: $dm.keyword)
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.search)
-                    .onSubmit { dm.search() }
+                HStack(spacing: 4) {
+                    TextField("検索キーワード", text: $dm.keyword)
+                        .textFieldStyle(.plain)
+                        .submitLabel(.search)
+                        .onSubmit { dm.search() }
+                    if !dm.keyword.isEmpty {
+                        Button {
+                            dm.keyword = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                                .frame(minWidth: 28, minHeight: 28)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("検索語をクリア")
+                    }
+                }
+                .padding(.horizontal, 8)
+                .frame(minHeight: 36)
+                .background(Color(uiColor: .tertiarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
+                }
                 Button("検索") { dm.search() }.buttonStyle(.borderedProminent)
                     .fixedSize(horizontal: true, vertical: false)
                 Text("\(dm.questions.count)件")

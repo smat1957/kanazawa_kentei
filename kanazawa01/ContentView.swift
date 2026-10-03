@@ -494,6 +494,7 @@ struct ContentView: View {
                 Button("検索") { dm.search() }.buttonStyle(.borderedProminent)
                     .fixedSize(horizontal: true, vertical: false)
                 Text("\(dm.questions.count)件")
+                    .font(.footnote)
                     .monospacedDigit()
                     .fixedSize(horizontal: true, vertical: false)
             }
@@ -512,7 +513,7 @@ struct ContentView: View {
                 .foregroundStyle(Color.accentColor)
                 .disabled(dm.current == 0)
             Spacer()
-            Text(dm.position).monospacedDigit().foregroundStyle(.primary)
+            Text(dm.position).font(.footnote).monospacedDigit().foregroundStyle(.primary)
             Spacer()
             Button { dm.show(at: dm.current + 1) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44).contentShape(Rectangle()) }
                 .accessibilityLabel("次の問題")
